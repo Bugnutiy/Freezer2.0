@@ -109,7 +109,7 @@ GyverDS18Single sensorFreezer(PIN_SENS_FREEZER);
 
 int8_t tempFridge = 0, tempFreezer = 0;
 
-uint8_t worker_mode = 0;
+uint8_t worker_mode = 0, errFreezer = 0, errFridge = 0;
 bool needFreezer = false, needFridge = false, needNofrost = false, needRest = false;
 
 uint32_t timerNofrostOff = 0;
@@ -126,36 +126,50 @@ void setup()
   noFrost.tick();
   attachInterrupt(0, isrCLK, CHANGE);
   attachInterrupt(1, isrDT, CHANGE);
-  sensorFreezer.requestTemp();
 
+  sensorFreezer.requestTemp();
   while (!sensorFreezer.ready())
   {
-    ledFreezer.blink(200);
+    ledFreezer.blink(50);
     ledBuiltin.blink(200);
-    DD("sensorFreezer.requestTemp()", 1000);
+    DD("setup() sensorFreezer.requestTemp()", 1000);
     TMR16_NEXT(50000, break;)
     TMR16_NEXT(1000, sensorFreezer.requestTemp();)
   }
   if (sensorFreezer.readTemp())
+  {
     tempFreezer = sensorFreezer.getTempInt();
+    errFreezer = 0;
+  }
   else
-    DD("Error sensorFreezer.readTemp()  Setup");
+  {
+    DD("setup() Error sensorFreezer.readTemp()");
+    errFreezer = 1;
+  }
   ledFreezer.set(0);
+
   sensorFridge.requestTemp();
   while (!sensorFridge.ready())
   {
-    ledFridge.blink(200);
+    ledFridge.blink(50);
     ledBuiltin.blink(200);
-    DD("sensorFridge.requestTemp()", 1000);
+    DD("setup() sensorFridge.requestTemp()", 1000);
     TMR16_NEXT(50000, break;)
     TMR16_NEXT(1000, sensorFridge.requestTemp();)
   }
   if (sensorFridge.readTemp())
+  {
     tempFridge = sensorFridge.getTempInt();
+    errFridge = 0;
+  }
   else
-    DD("Error sensorFridge.readTemp()  Setup");
+  {
+    DD("setup() Error sensorFridge.readTemp()");
+    errFridge = 1;
+  }
   ledFridge.set(0);
   sensorFreezer.requestTemp();
+  sensorFridge.requestTemp();
 }
 
 void tempUpdate()
@@ -193,7 +207,7 @@ void NoFrostFunc()
   {
     needNofrost = true;
   }
-  if ((millis() - timerNofrostOff > NO_FROST_OFF_TIME * hour) && noFrost.getState() )
+  if ((millis() - timerNofrostOff > NO_FROST_OFF_TIME * hour) && noFrost.getState())
   {
     needNofrost = false;
   }
